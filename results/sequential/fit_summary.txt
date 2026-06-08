@@ -1,0 +1,19 @@
+======================================================================
+SEQUENTIAL FIT RESULTS: A → B → C → GS (3 Exponentials)
+======================================================================
+
+Component       CBK-D (ps)      CBK-H (ps)      D/H Ratio   
+---------------------------------------------------------
+τ₁ (A→B)        6.8             6.8             1.00        
+τ₂ (B→C)        68.9            88.7            0.78        
+τ₃ (C→GS)       6185.2          4318.9          1.43        
+---------------------------------------------------------
+
+CBK-D fit cost: 2.6077e-02
+CBK-H fit cost: 2.7665e-02
+
+Notes:
+  - τ₃ > measurement window (6009 ps) — extrapolated
+  - Model: sum of 3 exponentials fitted to 1st SVD component
+  - Global optimization: differential evolution + LM polish
+======================================================================

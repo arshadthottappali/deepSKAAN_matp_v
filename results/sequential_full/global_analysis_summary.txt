@@ -1,0 +1,21 @@
+========================================================================
+GLOBAL ANALYSIS — Sequential Model: A → B → C → GS
+EADS Decomposition (Evolution-Associated Difference Spectra)
+========================================================================
+
+Component       CBK-D (ps)      CBK-H (ps)      D/H Ratio    Assignment          
+------------------------------------------------------------------------
+τ₁ (A→B)        9.4             13.8            0.69         Vibrational cooling 
+τ₂ (B→C)        91.8            173.9           0.53         Structural relaxation
+τ₃ (C→GS)       29347.6         11771.2         2.49         Radiative/non-rad decay
+------------------------------------------------------------------------
+
+CBK-D:  IRF σ = 0.070 ps,  t₀ = 0.011 ps,  cost = 1.3934e-04
+CBK-H:  IRF σ = 0.075 ps,  t₀ = -0.004 ps,  cost = 9.9073e-05
+
+Notes:
+  - EADS (not SADS) because model is sequential
+  - τ₃ exceeds measurement window (~6000 ps) — lower bound estimate
+  - 3 EADS components + Gaussian IRF convolution
+  - Optimization: differential evolution + Levenberg-Marquardt polish
+========================================================================

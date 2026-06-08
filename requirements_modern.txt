@@ -1,0 +1,9 @@
+# FIX #20: minimum Python 3.7+ required (dataclasses, secrets, f-strings).
+# Tested with Python 3.10 / 3.11.
+torch>=2.0
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+networkx>=3.0
+tqdm>=4.65
+h5py>=3.8          # for pre-generated HDF5 datasets

@@ -1,0 +1,194 @@
+==============================================================================
+DeepSKAN PROJECT HISTORY — Summary for Future Context
+==============================================================================
+Author: Muhammed Arshad Thottappali
+Institute: Macromolecular Chemistry, Czech Academy of Sciences, Prague
+Date: June 2026
+Purpose: ML4MatSci PhD Summer School, Sarajevo, June 10-12, 2026
+Poster: "Challenges in Interpreting Ultrafast Spectroscopy Data: A Case for ML"
+
+==============================================================================
+WHAT THIS PROJECT IS
+==============================================================================
+
+DeepSKAN = Deep Spectroscopy Kinetic Analysis Network.
+It uses a CNN to classify transient absorption (TA) spectroscopy data into
+kinetic model topologies (sequential, branching, parallel, etc.).
+
+The system under study: H/D-substituted indolonaphthyridine porphyrin complex.
+- CBK-H = protonated (normal hydrogen)
+- CBK-D = deuterated (heavy hydrogen)
+Both measured with 476nm excitation, WLC probe 430-800nm, fs-ns timescale.
+
+==============================================================================
+WHAT WE BUILT (chronological)
+==============================================================================
+
+PHASE 1 — Quick Fixes to original DeepSKAN code:
+  - Fixed ODE tolerance (1e-10 → 1e-6 for training, tight for real data)
+  - Fixed normalization bug (use abs-max, not just max)
+  - Fixed shape bug in predict() (unsqueeze handling)
+  - Fixed requirements.txt (Python 3.7+, not 3.6)
+
+PHASE 2 — Training Overhaul:
+  - Added BatchNorm to all residual blocks
+  - Added Dropout (0.3) before FC layers
+  - Replaced hardcoded Linear(2048) with AdaptiveAvgPool2d
+  - Created HDF5 pre-generated dataset system (generate_parallel.py)
+  - Added balanced class sampling
+  - Added mixed precision (AMP), gradient clipping
+  - Full checkpoint saving (model + optimizer + scheduler + epoch)
+  - Colab/Kaggle/Lightning.ai platform auto-detection
+
+PHASE 3 — Analysis Pipeline:
+  - Fixed get_best_ta to use actual residual (not amplitude heuristic)
+  - Replaced Monte Carlo GA with differential_evolution
+  - Added confidence threshold + top-k predictions
+  - Capped permutation search at 24 (prevents n! blow-up)
+  - Added input validation (checks CSV format before analysis)
+
+PHASE 4 — Generalization:
+  - Added structured noise (baseline drift, scatter, coherent artifact)
+  - Created Grad-CAM visualization
+  - Created evaluate.py (benchmark on real data)
+
+DeepSKAN v2 (train_improved.py):
+  - REGRESSION (not classification) — outputs log10(tau1, tau2, tau3)
+  - 2-channel input (TA signal + log-time coordinate)
+  - Trains on realistic spectral templates from SVD of real data
+  - Analytical concentrations (no slow expm loop)
+  - Ordering constraint (tau1 < tau2 < tau3)
+  - Final accuracy: ~8-11% factor error on synthetic validation
+
+PINN (pinn_learning/):
+  - Physics-Informed fitting: matrix exponential + IRF
+  - Fits single dataset directly (no training data needed)
+  - Gives best quantitative results: tau1=9.6, tau2=92.6, tau3>6ns for CBK-D
+
+==============================================================================
+KEY RESULTS
+==============================================================================
+
+GLOBAL ANALYSIS (forced sequential A→B→C→GS):
+  CBK-D: tau1=9.6ps, tau2=92.6ps, tau3>6ns
+  CBK-H: tau1=13.4ps, tau2=166.8ps, tau3>6ns
+  Anomaly: D is FASTER for tau1, tau2 (inverse isotope effect)
+  Expected: D should be slower (normal KIE)
+
+DeepSKAN v1 PREDICTIONS:
+  CBK-H: Class 6 (A→B→C, sequential), confidence 59%
+  CBK-D: Class 19 (A→B, A→C, B→C, B→D, branching), confidence 40%
+  Key finding: CNN suggests D may have DIFFERENT TOPOLOGY than H
+  → The "anomaly" might be an artifact of forcing wrong model
+
+DeepSKAN v2 PREDICTIONS (regression):
+  CBK-D: tau1=9.7ps, tau2=348ps, tau3=7265ps
+  CBK-H: tau1=8.2ps, tau2=175ps, tau3=8231ps
+  Good for tau1 and tau3, overestimates tau2 for CBK-D
+
+==============================================================================
+WHAT FAILED AND WHY
+==============================================================================
+
+1. DeepSKAN v1 automated GA gave tau=0.0ps
+   CAUSE: CNN-preprocessed data (256x64 normalized) lost time-scale info.
+   The optimizer collapsed to boundary values.
+
+2. Original training was painfully slow (~58 min/epoch)
+   CAUSE: solve_ivp in __getitem__ — solved by pre-generation (HDF5)
+
+3. Kaggle draft sessions lost checkpoints multiple times
+   CAUSE: /kaggle/working not persisted. Fixed by commit runs.
+
+4. P100 GPU incompatible with PyTorch 2.10+
+   CAUSE: sm_60 dropped. Switched to T4.
+
+5. enumerate_viable_models gave 21 for num_species=4 (not 103)
+   CAUSE: 103 classes comes from num_species=5, not 4. The original paper
+   used 5 species. We kept 4 (21 classes) for moderate complexity.
+
+==============================================================================
+PLATFORM NOTES
+==============================================================================
+
+- Kaggle: GPU quota used up, files lost in draft sessions. Commit runs work
+  but need GPU enabled in settings.
+- Colab: session timeouts, need Drive mount for persistence.
+- Lightning.ai: BEST option. Persistent storage, no timeouts, T4 GPU.
+  Files survive sleep/wake. Used for final training runs.
+
+Training was done on Lightning.ai:
+  - v1: 100 epochs, 100k samples/epoch, batch 128, T4 GPU → 72% val acc
+  - v2: 100 epochs, 100k samples/epoch, batch 128, T4 GPU → 8-11% factor error
+
+Checkpoints: checkpoints/best_model.pt (v1), checkpoints/deepskan_v2_best.pt (v2)
+
+==============================================================================
+FILE MAP (key files)
+==============================================================================
+
+Code:
+  train.py                  — v1 training (classification, 21 classes)
+  train_improved.py         — v2 training (regression, realistic spectra)
+  analyze.py                — full analysis pipeline (v1)
+  analyze_sequential.py     — direct GA (SVD + 3 exponentials)
+  analyze_sequential_full.py — full 2D GA with EADS
+  evaluate.py               — benchmark on real data
+  generate_parallel.py      — fast parallel dataset generation
+
+Architecture:
+  deepGTA_torch/model.py    — DeepSKAN CNN architecture
+  deepGTA_torch/analyzer.py — DLAnalyzer + GTAnalyzer
+  deepGTA_torch/physics.py  — ODE solver, IRF, normalization
+  deepGTA_torch/kinetic_models.py — 21 topology enumeration
+  deepGTA_torch/gradcam.py  — Grad-CAM visualization
+  deepGTA_torch/data_generator.py — synthetic training data
+  deepGTA_torch/hdf5_dataset.py   — HDF5 dataset loader
+
+Learning / Explanation:
+  pinn_learning/PINN_tutorial.ipynb — PINN hands-on notebook
+  DeepSKAN_v2_Analysis.ipynb        — v2 inference + comparison
+  docs/DeepSKAN_v1_Complete_Explanation.md  — full architecture explanation
+  docs/DeepSKAN_v1_Complete_Explanation.docx — same as Word doc
+
+Poster:
+  poster/poster_content.md           — full poster text
+  poster/POSTER_A0.pptx              — A0 poster in PowerPoint
+  poster/11_MuhammedArshad_pitch_v2.pptx — 2-slide pitch
+  poster/*.png                       — poster figures
+  final poster.pdf                   — submitted final version
+
+Results:
+  results/training_curve.png         — v1 training loss/accuracy
+  results/sequential_full/eads.png   — EADS from GA
+  results/sequential_full/concentrations.png — species profiles
+  results/CBK-D/*_confidence.png     — CNN confidence for CBK-D
+  results/CBK-H/*_confidence.png     — CNN confidence for CBK-H
+  pinn_learning/output/*.png         — PINN comparison figures
+
+Data:
+  my_test/chirp corrected/           — best quality data (2 files)
+  my_test/not chirp corrected/       — without chirp correction (2 files)
+  my_test/random cbk data/           — additional measurements (10 files)
+  checkpoints/best_model.pt          — trained v1 model
+  checkpoints/deepskan_v2_best.pt    — trained v2 model
+
+==============================================================================
+HOW TO RESUME WORK ON ANOTHER MACHINE
+==============================================================================
+
+1. Copy this entire folder to the new machine
+2. Open in Kiro (or any Python IDE)
+3. Install deps: pip install torch numpy scipy matplotlib networkx tqdm h5py
+4. Start a new Kiro chat with:
+   "Read docs/project_history.txt and docs/DeepSKAN_v1_Complete_Explanation.md
+    to understand this project. I'm presenting at ML4MatSci summer school."
+
+5. To run analysis on Lightning.ai:
+   - Upload zip
+   - unzip, cd into deepSKAN_public-master/deepSKAN_public-master
+   - python analyze.py --data "my_test/chirp corrected/CBK-D..." --model checkpoints/best_model.pt --num_species 4 --predict_only
+
+==============================================================================
+END
+==============================================================================

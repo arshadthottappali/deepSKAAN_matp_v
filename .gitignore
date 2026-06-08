@@ -1,0 +1,22 @@
+# Datasets (too large for GitHub)
+datasets/
+*.h5
+
+# Model checkpoints (too large for GitHub)
+checkpoints/*.pt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
